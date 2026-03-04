@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: pengaduan-masyarakat
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: false
+      - key: DB_CONNECTION
+        value: mysql
+      - key: SESSION_DRIVER
+        value: database
+      - key: FILESYSTEM_DISK
+        value: supabase
+      - key: LOG_CHANNEL
+        value: stderr
