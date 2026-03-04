@@ -1,250 +1,221 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { useState } from 'react';
-import { Send, CheckCircle, XCircle, User, Calendar, MapPin, Tag } from 'lucide-react';
-import UpdateStatusButton from '@/Components/UpdateStatusButton';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useState, useRef } from 'react';
+import {
+    Send, User, Calendar, MapPin, Tag,
+    ImagePlus, X, FileImage, Trash2, ZoomIn,
+    CheckCircle, Clock, XCircle, ShieldCheck
+} from 'lucide-react';
 
+import Lightbox from '@/components/Lightbox';
+import GlassConfirmModal from '@/components/GlassConfirmModal';
+import TanggapanBubble from '@/components/TanggapanBubble';
 
-const STATUS_COLORS = {
-  menunggu: 'bg-yellow-100 text-yellow-800',
-  diproses: 'bg-blue-100 text-blue-800',
-  selesai:  'bg-green-100 text-green-800',
-  ditolak:  'bg-red-100 text-red-800',
+const STATUS_STYLES = {
+    menunggu: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200', label: 'Menunggu', icon: Clock },
+    diproses: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', label: 'Diproses', icon: ShieldCheck },
+    selesai:  { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200', label: 'Selesai', icon: CheckCircle },
+    ditolak:  { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200', label: 'Ditolak', icon: XCircle },
 };
 
-export default function PengaduanShow({ pengaduan, petugasList }) {
-  const { auth } = usePage().props;
-  const user = auth.user;
+export default function Show({ pengaduan, petugasList }) {
+    const { auth } = usePage().props;
+    const user = auth.user;
 
-  const tanggapanForm = useForm({ tanggapan: '' });
-  const verifikasiForm = useForm({
-    is_verified: pengaduan.is_verified,
-    is_valid: pengaduan.is_valid,
-    catatan_admin: pengaduan.catatan_admin || '',
-    petugas_id: pengaduan.petugas_id || '',
-  });
+    const [text, setText] = useState('');
+    const [file, setFile] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [sending, setSending] = useState(false);
+    const [lightbox, setLightbox] = useState(null);
 
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [nextStatus, setNextStatus] = useState(null);
 
-  const handleTanggapan = e => {
-    e.preventDefault();
-    tanggapanForm.post(`/pengaduan/${pengaduan.id}/tanggapan`, {
-      onSuccess: () => tanggapanForm.reset(),
-    });
-  };
+    const fileRef = useRef();
 
-  const handleVerifikasi = e => {
-    e.preventDefault();
-    verifikasiForm.post(`/pengaduan/${pengaduan.id}/verifikasi`);
-  };
-  
-  return (
-    <AppLayout title={`Pengaduan #${pengaduan.kode_aduan}`}>
-      <Head title={`Pengaduan - ${pengaduan.judul}`} />
+    const s = STATUS_STYLES[pengaduan.status] ?? STATUS_STYLES.menunggu;
+    const StatusIcon = s.icon;
 
-      <div className="max-w-4xl mx-auto space-y-5">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-              <div>
-                <span className="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                  {pengaduan.kode_aduan}
-                </span>
-                <h2 className="text-xl font-bold text-gray-900 mt-2">{pengaduan.judul}</h2>
-              </div>
-              <span className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[pengaduan.status]}`}>
-                {pengaduan.status.charAt(0).toUpperCase() + pengaduan.status.slice(1)}
-              </span>
-            </div>
+    const handleUpdateStatus = (status) => {
+        setNextStatus(status);
+        setConfirmOpen(true);
+    };
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-5">
-              <div className="flex items-center gap-2 text-gray-500">
-                <User className="w-4 h-4" />
-                <span>{pengaduan.user?.name}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Tag className="w-4 h-4" />
-                <span className="capitalize">{pengaduan.kategori}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Calendar className="w-4 h-4" />
-                <span>{new Date(pengaduan.tanggal_pengaduan).toLocaleDateString('id-ID')}</span>
-              </div>
-              {pengaduan.lokasi && (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <MapPin className="w-4 h-4" />
-                  <span className="truncate">{pengaduan.lokasi}</span>
-                </div>
-              )}
-            </div>
+    const confirmStatusChange = () => {
+        router.post(`/pengaduan/${pengaduan.id}/status`,
+            { status: nextStatus },
+            {
+                onFinish: () => {
+                    setConfirmOpen(false);
+                    setNextStatus(null);
+                }
+            }
+        );
+    };
 
-            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 leading-relaxed mb-4">
-              {pengaduan.isi_laporan}
-            </div>
+    const handleSend = e => {
+        e.preventDefault();
+        if (!text.trim() && !file) return;
 
-            {pengaduan.foto_url && (
-              <img
-                src={pengaduan.foto_url}
-                alt="Foto pengaduan"
-                className="rounded-xl max-h-80 w-full object-cover"
-              />
-            )}
-          </div>
+        setSending(true);
 
-          {pengaduan.petugas && (
-            <div className="px-6 py-4 bg-blue-50 border-t border-blue-100 flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-blue-500">Ditangani oleh</p>
-                <p className="text-sm font-medium text-blue-800">{pengaduan.petugas.name}</p>
-              </div>
-            </div>
-          )}
-        </div>
+        const fd = new FormData();
+        fd.append('tanggapan', text);
+        if (file) fd.append('lampiran', file);
 
-        {(user.role === 'admin' || user.role === 'petugas') && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Panel Verifikasi & Validasi</h3>
-            <form onSubmit={handleVerifikasi} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={verifikasiForm.data.is_verified}
-                    onChange={e => verifikasiForm.setData('is_verified', e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Terverifikasi</p>
-                    <p className="text-xs text-gray-400">Identitas pelapor valid</p>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={verifikasiForm.data.is_valid}
-                    onChange={e => verifikasiForm.setData('is_valid', e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Divalidasi</p>
-                    <p className="text-xs text-gray-400">Laporan layak ditindaklanjuti</p>
-                  </div>
-                </label>
-              </div>
+        router.post(`/pengaduan/${pengaduan.id}/tanggapan`, fd, {
+            forceFormData: true,
+            onFinish: () => {
+                setSending(false);
+                setText('');
+                setFile(null);
+                setPreview(null);
+            }
+        });
+    };
 
-              {petugasList.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tugaskan ke Petugas</label>
-                  <select
-                    value={verifikasiForm.data.petugas_id}
-                    onChange={e => verifikasiForm.setData('petugas_id', e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">-- Pilih Petugas --</option>
-                    {petugasList.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+    return (
+        <AppLayout title={`Pengaduan #${pengaduan.kode_aduan}`}>
+            <Head title={`Pengaduan - ${pengaduan.judul}`} />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Catatan Admin</label>
-                <textarea
-                  rows={3}
-                  value={verifikasiForm.data.catatan_admin}
-                  onChange={e => verifikasiForm.setData('catatan_admin', e.target.value)}
-                  placeholder="Catatan internal..."
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
+            <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
 
-              <button
-                type="submit"
-                disabled={verifikasiForm.processing}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
-              >
-                Simpan Verifikasi
-              </button>
-            </form>
-          </div>
-        )}
+            <GlassConfirmModal
+                open={confirmOpen}
+                title="Konfirmasi Perubahan Status"
+                message={`Yakin ingin mengubah status menjadi "${nextStatus}"?`}
+                confirmText="Ya, Ubah"
+                onConfirm={confirmStatusChange}
+                onCancel={() => setConfirmOpen(false)}
+            />
 
-        <UpdateStatusButton pengaduan={pengaduan} user={user}/>
+            <div className="max-w-3xl mx-auto space-y-6">
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h3 className="font-semibold text-gray-900 mb-5">
-            Tanggapan ({pengaduan.tanggapans?.length || 0})
-          </h3>
+                {/* DETAIL PENGADUAN */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-6">
 
-          <div className="space-y-4 mb-6">
-            {pengaduan.tanggapans?.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
-                <p className="text-sm">Belum ada tanggapan</p>
-              </div>
-            )}
-            {pengaduan.tanggapans?.map(t => (
-              <div key={t.id} className={`flex gap-3 ${t.tipe !== 'masyarakat' ? 'flex-row-reverse' : ''}`}>
-                <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(t.user?.name)}&size=32&background=${t.tipe === 'admin' ? 'ef4444' : t.tipe === 'petugas' ? '3b82f6' : '6366f1'}&color=fff`}
-                  className="w-8 h-8 rounded-full flex-shrink-0"
-                  alt=""
-                />
-                <div className={`flex-1 max-w-md ${t.tipe !== 'masyarakat' ? 'items-end' : 'items-start'} flex flex-col`}>
-                  <div className={`rounded-2xl px-4 py-3 ${
-                    t.tipe === 'admin' ? 'bg-red-50 border border-red-100' :
-                    t.tipe === 'petugas' ? 'bg-blue-50 border border-blue-100' :
-                    'bg-gray-50 border border-gray-100'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-semibold text-gray-700">{t.user?.name}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        t.tipe === 'admin' ? 'bg-red-100 text-red-600' :
-                        t.tipe === 'petugas' ? 'bg-blue-100 text-blue-600' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>
-                        {t.tipe}
-                      </span>
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <span className="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                                {pengaduan.kode_aduan}
+                            </span>
+                            <h2 className="text-xl font-bold mt-2">
+                                {pengaduan.judul}
+                            </h2>
+                        </div>
+
+                        <span className={`inline-flex items-center gap-1 text-sm font-semibold px-3 py-1 rounded-full border ${s.bg} ${s.text} ${s.border}`}>
+                            <StatusIcon className="w-4 h-4" />
+                            {s.label}
+                        </span>
                     </div>
-                    <p className="text-sm text-gray-700">{t.tanggapan}</p>
-                  </div>
-                  <span className="text-xs text-gray-400 mt-1 px-1">
-                    {new Date(t.created_at).toLocaleString('id-ID')}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {pengaduan.status !== 'ditolak' && (
-            <form onSubmit={handleTanggapan} className="flex gap-3">
-              <img
-                src={auth.user.avatar_url}
-                className="w-9 h-9 rounded-full flex-shrink-0"
-                alt=""
-              />
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  value={tanggapanForm.data.tanggapan}
-                  onChange={e => tanggapanForm.setData('tanggapan', e.target.value)}
-                  placeholder="Tulis tanggapan..."
-                  className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                  type="submit"
-                  disabled={tanggapanForm.processing || !tanggapanForm.data.tanggapan}
-                  className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-xl transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </AppLayout>
-  );
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm text-gray-500 mb-4">
+                        <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            {pengaduan.user?.name}
+                        </div>
+                        <div className="flex items-center gap-2 capitalize">
+                            <Tag className="w-4 h-4" />
+                            {pengaduan.kategori}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(pengaduan.tanggal_pengaduan).toLocaleDateString('id-ID')}
+                        </div>
+                        {pengaduan.lokasi && (
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                {pengaduan.lokasi}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="bg-gray-50 rounded-xl p-4 text-sm leading-relaxed mb-4">
+                        {pengaduan.isi_laporan}
+                    </div>
+
+                    {pengaduan.foto_url && (
+                        <div
+                            className="rounded-xl overflow-hidden cursor-zoom-in"
+                            onClick={() => setLightbox(pengaduan.foto_url)}
+                        >
+                            <img
+                                src={pengaduan.foto_url}
+                                className="w-full max-h-72 object-cover"
+                            />
+                        </div>
+                    )}
+
+                    {/* BUTTON STATUS */}
+                    <div className="flex gap-2 mt-6 flex-wrap">
+                        {pengaduan.status === 'menunggu' && (
+                            <button
+                                onClick={() => handleUpdateStatus('diproses')}
+                                className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl"
+                            >
+                                Tandai Diproses
+                            </button>
+                        )}
+
+                        {pengaduan.status === 'diproses' && (
+                            <button
+                                onClick={() => handleUpdateStatus('selesai')}
+                                className="px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-xl"
+                            >
+                                Tandai Selesai
+                            </button>
+                        )}
+
+                        {user.role === 'admin' && (
+                            <button
+                                onClick={() => handleUpdateStatus('ditolak')}
+                                className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl"
+                            >
+                                Tolak
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* TANGGAPAN */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="font-semibold mb-4">
+                        Tanggapan ({pengaduan.tanggapans?.length || 0})
+                    </h3>
+
+                    <div className="space-y-4 mb-6">
+                        {pengaduan.tanggapans?.map(t => (
+                            <TanggapanBubble
+                                key={t.id}
+                                t={t}
+                                currentUserId={user.id}
+                                onDelete={(id) => router.delete(`/tanggapan/${id}`)}
+                                onLightbox={setLightbox}
+                            />
+                        ))}
+                    </div>
+
+                    {pengaduan.status !== 'ditolak' && (
+                        <form onSubmit={handleSend} className="flex items-center gap-2 bg-gray-50 border rounded-xl p-2">
+                            <textarea
+                                value={text}
+                                onChange={e => setText(e.target.value)}
+                                placeholder="Tulis tanggapan..."
+                                className="flex-1 bg-transparent resize-none outline-none text-sm"
+                            />
+
+                            <button
+                                type="submit"
+                                disabled={sending}
+                                className="p-2 bg-indigo-600 text-white rounded-lg"
+                            >
+                                {sending ? '...' : <Send className="w-4 h-4" />}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </AppLayout>
+    );
 }

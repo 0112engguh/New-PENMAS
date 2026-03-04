@@ -1,21 +1,18 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Pengaduan;
 use App\Models\Tanggapan;
 use App\Models\Notifikasi;
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Storage;
 
 class TanggapanController extends Controller
 {
-    use AuthorizesRequests;
-
     public function store(Request $request, Pengaduan $pengaduan)
     {
         $request->validate([
-            'tanggapan' => 'required|string|min:5',
+            'tanggapan' => 'required|string|min:3',
             'lampiran'  => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ]);
 
@@ -23,7 +20,8 @@ class TanggapanController extends Controller
         $lampiranPath = null;
 
         if ($request->hasFile('lampiran')) {
-            $lampiranPath = $request->file('lampiran')->store('tanggapan', 'public');
+            $lampiranPath = $request->file('lampiran')
+                ->store('tanggapan', 'public');
         }
 
         Tanggapan::create([
@@ -38,11 +36,20 @@ class TanggapanController extends Controller
             Notifikasi::create([
                 'user_id' => $pengaduan->user_id,
                 'judul'   => 'Tanggapan Baru',
-                'pesan'   => "Ada tanggapan baru pada pengaduan Anda: {$pengaduan->judul}",
+                'pesan'   => "Ada tanggapan baru pada pengaduan: {$pengaduan->judul}",
                 'link'    => route('pengaduan.show', $pengaduan->id),
             ]);
         }
 
         return back()->with('success', 'Tanggapan berhasil dikirim.');
+    }
+
+    public function destroy(Tanggapan $tanggapan)
+    {
+        if ($tanggapan->lampiran) {
+            Storage::disk('public')->delete($tanggapan->lampiran);
+        }
+        $tanggapan->delete();
+        return back()->with('success', 'Tanggapan dihapus.');
     }
 }

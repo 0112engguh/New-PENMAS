@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
     Route::post('/notifikasi/{notifikasi}/read', [NotifikasiController::class, 'markRead'])->name('notifikasi.read');
     Route::post('/notifikasi/read-all', [NotifikasiController::class, 'readAll'])->name('notifikasi.readAll');
+    Route::delete('tanggapan/{tanggapan}', [TanggapanController::class, 'destroy'])->name('tanggapan.destroy');
 
     Route::middleware('role:admin,petugas')->group(function () {
         Route::post('pengaduan/{pengaduan}/verifikasi', [PengaduanController::class, 'verifikasi'])
