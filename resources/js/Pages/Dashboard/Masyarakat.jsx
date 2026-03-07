@@ -1,128 +1,119 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { FileText, Clock, CheckCircle, Plus, ArrowRight, AlertCircle } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Plus, ArrowRight, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 
-const STATUS_COLORS = {
-    menunggu: 'bg-yellow-100 text-yellow-800',
-    diproses: 'bg-blue-100 text-blue-800',
-    selesai:  'bg-green-100 text-green-800',
-    ditolak:  'bg-red-100 text-red-800',
+const STATUS = {
+    menunggu: { bg:'bg-yellow-50', text:'text-yellow-700', dot:'bg-yellow-400', label:'Menunggu' },
+    diproses: { bg:'bg-blue-50',   text:'text-blue-700',   dot:'bg-blue-500',   label:'Diproses' },
+    selesai:  { bg:'bg-green-50',  text:'text-green-700',  dot:'bg-green-500',  label:'Selesai'  },
+    ditolak:  { bg:'bg-red-50',    text:'text-red-600',    dot:'bg-red-500',    label:'Ditolak'  },
 };
 
-const STATUS_ICONS = {
-    menunggu: Clock,
-    diproses: AlertCircle,
-    selesai:  CheckCircle,
-    ditolak:  AlertCircle,
+const EMOJI = {
+    infrastruktur: '🏗️',
+    pelayanan:     '🏥',
+    keamanan:      '🔒',
+    lingkungan:    '🌿',
+    lainnya:       '📋',
 };
 
-export default function MasyarakatDashboard({ stats, pengaduanSaya }) {
-    const { auth } = usePage().props;
-
-    const statCards = [
-        { label: 'Total Pengaduan', value: stats.total,    icon: FileText,    bg: 'bg-indigo-500' },
-        { label: 'Menunggu',        value: stats.menunggu, icon: Clock,        bg: 'bg-yellow-500' },
-        { label: 'Diproses',        value: stats.diproses, icon: AlertCircle,  bg: 'bg-blue-500'   },
-        { label: 'Selesai',         value: stats.selesai,  icon: CheckCircle,  bg: 'bg-green-500'  },
-    ];
-
+export default function MasyarakatDashboard({ stats, recentPengaduan }) {
     return (
         <AppLayout title="Dashboard">
             <Head title="Dashboard" />
 
-            {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-6 mb-6 text-white relative overflow-hidden">
-                <div className="absolute right-0 top-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute right-12 bottom-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2" />
-                <div className="relative">
-                    <p className="text-indigo-200 text-sm mb-1">Selamat Datang,</p>
-                    <h2 className="text-2xl font-bold mb-3">{auth.user.name} 👋</h2>
-                    <p className="text-indigo-100 text-sm mb-5 max-w-sm">
-                        Ada keluhan atau masukan? Sampaikan kepada kami dan kami akan segera menindaklanjutinya.
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+
+                <div className="bg-white rounded-2xl border border-gray-100 p-7 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                    <p className="text-xs text-gray-400 font-medium mb-2">Selamat datang 👋</p>
+                    <h2 className="text-2xl font-extrabold text-gray-900 leading-tight mb-2">
+                        Suarakan<br />Aspirasimu
+                    </h2>
+                    <p className="text-sm text-gray-400 leading-relaxed mb-6">
+                        Laporkan masalah di sekitarmu dan pantau perkembangan pengaduanmu secara real-time.
                     </p>
-                    <Link
-                        href="/pengaduan/create"
-                        className="inline-flex items-center gap-2 bg-white text-indigo-600 hover:bg-indigo-50 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Buat Pengaduan Baru
+                    <Link href="/pengaduan/create"
+                        className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-colors">
+                        <Plus className="w-4 h-4" /> Buat Pengaduan
                     </Link>
                 </div>
-            </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                {statCards.map(card => (
-                    <div key={card.label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <div className={`w-9 h-9 ${card.bg} rounded-lg flex items-center justify-center mb-3`}>
-                            <card.icon className="w-4 h-4 text-white" />
+                <div className="grid grid-cols-2 gap-3">
+                    {[
+                        { label:'Total Laporan', value: stats.total,    bg:'bg-gray-50',    text:'text-gray-700',   icon: FileText    },
+                        { label:'Diproses',      value: stats.diproses, bg:'bg-blue-50',    text:'text-blue-700',   icon: Clock       },
+                        { label:'Selesai',       value: stats.selesai,  bg:'bg-green-50',   text:'text-green-700',  icon: CheckCircle },
+                        { label:'Ditolak',       value: stats.ditolak,  bg:'bg-red-50',     text:'text-red-600',    icon: XCircle     },
+                    ].map(s => (
+                        <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4">
+                            <div className={`w-8 h-8 ${s.bg} rounded-xl flex items-center justify-center mb-3`}>
+                                <s.icon className={`w-4 h-4 ${s.text}`} />
+                            </div>
+                            <p className="text-2xl font-extrabold text-gray-900 leading-none mb-1">{s.value}</p>
+                            <p className="text-xs text-gray-400 font-medium">{s.label}</p>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
-            {/* Pengaduan Terbaru */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Pengaduan Terbaru Saya</h3>
-                    <Link
-                        href="/pengaduan"
-                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
-                    >
-                        Lihat Semua <ArrowRight className="w-3.5 h-3.5" />
+            <div className="bg-white rounded-2xl border border-gray-100">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+                    <div>
+                        <h3 className="text-base font-bold text-gray-900">Pengaduan Saya</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">Riwayat laporan yang pernah dibuat</p>
+                    </div>
+                    <Link href="/pengaduan"
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 font-semibold transition-colors">
+                        Lihat semua <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                 </div>
 
-                {pengaduanSaya.length === 0 ? (
-                    <div className="text-center py-16">
-                        <FileText className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                        <p className="text-sm text-gray-400 mb-4">Anda belum memiliki pengaduan</p>
-                        <Link
-                            href="/pengaduan/create"
-                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Buat Pengaduan Pertama
+                {recentPengaduan.length === 0 ? (
+                    <div className="py-16 text-center">
+                        <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <FileText className="w-5 h-5 text-gray-300" />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-400 mb-1">Belum ada pengaduan</p>
+                        <p className="text-xs text-gray-300 mb-5">Mulai buat laporan pertamamu sekarang</p>
+                        <Link href="/pengaduan/create"
+                            className="inline-flex items-center gap-2 bg-black text-white px-5 py-2 rounded-full text-xs font-semibold hover:bg-gray-800 transition-colors">
+                            <Plus className="w-3.5 h-3.5" /> Buat Sekarang
                         </Link>
                     </div>
-                ) : (
-                    <div className="divide-y divide-gray-50">
-                        {pengaduanSaya.map(p => {
-                            const StatusIcon = STATUS_ICONS[p.status] ?? FileText;
-                            return (
-                                <Link
-                                    key={p.id}
-                                    href={`/pengaduan/${p.id}`}
-                                    className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
-                                >
-                                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        <StatusIcon className="w-5 h-5 text-indigo-500" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate">{p.judul}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-xs font-mono text-indigo-500">{p.kode_aduan}</span>
-                                            <span className="text-gray-300">·</span>
-                                            <span className="text-xs text-gray-400">
-                                                {new Date(p.tanggal_pengaduan).toLocaleDateString('id-ID', {
-                                                    day: '2-digit', month: 'short', year: 'numeric'
-                                                })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 flex-shrink-0">
-                                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[p.status]}`}>
-                                            {p.status}
-                                        </span>
-                                        <ArrowRight className="w-4 h-4 text-gray-300" />
-                                    </div>
-                                </Link>
-                            );
-                        })}
-                    </div>
-                )}
+                ) : recentPengaduan.map((p, i) => {
+                    const s = STATUS[p.status] ?? STATUS.menunggu;
+                    return (
+                        <Link key={p.id} href={`/pengaduan/${p.id}`}
+                            className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors
+                                ${i < recentPengaduan.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
+                                {EMOJI[p.kategori] ?? '📋'}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate mb-1">{p.judul}</p>
+                                <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <span className="font-mono">{p.kode_aduan}</span>
+                                    <span className="text-gray-200">·</span>
+                                    <span className="capitalize">{p.kategori}</span>
+                                </div>
+                            </div>
+
+                            <div className="text-right flex-shrink-0">
+                                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full ${s.bg} ${s.text} mb-1`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                                    {s.label}
+                                </span>
+                                <p className="text-xs text-gray-300 block">
+                                    {new Date(p.tanggal_pengaduan).toLocaleDateString('id-ID', {
+                                        day:'2-digit', month:'short', year:'numeric'
+                                    })}
+                                </p>
+                            </div>
+                        </Link>
+                    );
+                })}
             </div>
         </AppLayout>
     );

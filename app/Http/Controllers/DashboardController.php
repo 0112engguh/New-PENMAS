@@ -86,11 +86,11 @@ class DashboardController extends Controller
             'selesai'  => Pengaduan::where('user_id', $user->id)->where('status', 'selesai')->count(),
         ];
 
-        $pengaduanSaya = Pengaduan::where('user_id', $user->id)
+        $recentPengaduan = $user->pengaduans()
             ->latest()
             ->take(5)
             ->get();
 
-        return Inertia::render('Dashboard/Masyarakat', compact('stats', 'pengaduanSaya'));
+        return Inertia::render('Dashboard/Masyarakat', compact('stats', 'recentPengaduan'));
     }
 }

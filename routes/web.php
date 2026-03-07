@@ -8,13 +8,18 @@ use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\ProfileController;
 
 Route::get('/', fn() => inertia('Welcome'))->name('home');
+Route::get('pengaduan/publik', [PengaduanController::class, 'publik'])
+    ->name('pengaduan.publik');
 
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get  ('/profile',          [ProfileController::class, 'edit']          )->name('profile.edit');
+    Route::patch('/profile',          [ProfileController::class, 'update']        )->name('profile.update');
+    Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::post ('/profile/avatar',   [ProfileController::class, 'updateAvatar']  )->name('profile.avatar');
+    Route::delete('/profile',         [ProfileController::class, 'destroy']       )->name('profile.destroy');
 
     Route::resource('pengaduan', PengaduanController::class)->except(['edit', 'update', 'destroy']);
 

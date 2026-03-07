@@ -96,20 +96,14 @@ class PengaduanController extends Controller
     public function show(Pengaduan $pengaduan)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPetugas() && $pengaduan->user_id !== $user->id) {
-            abort(403, 'Akses ditolak.');
-        }
 
         $pengaduan->load(['user', 'petugas', 'tanggapans.user']);
 
-        $petugasList = [];
-        if (auth()->user()->isAdmin()) {
-            $petugasList = User::where('role', 'petugas')->where('status', 'aktif')->get();
-        }
-
-        return Inertia::render('Pengaduan/Show', [
+        return inertia('Pengaduan/Show', [
             'pengaduan'   => $pengaduan,
-            'petugasList' => $petugasList,
+            'petugasList' => $user->role === 'admin'
+                ? \App\Models\User::where('role', 'petugas')->get(['id','name'])
+                : collect(),
         ]);
     }
 
@@ -152,7 +146,7 @@ class PengaduanController extends Controller
 
     public function updateStatus(Request $request, Pengaduan $pengaduan)
     {
-        $request->validate(['status' => 'required|in:diproses,selesai']);
+        $request->validate(['status' => 'required|in:diproses,selesai,ditolak']);
 
         $pengaduan->update(['status' => $request->status]);
 
@@ -189,5 +183,23 @@ class PengaduanController extends Controller
         ];
 
         return Inertia::render('Admin/Laporan', $data);
+    }
+
+    public function publik(Request $request)
+    {
+        $pengaduans = Pengaduan::with('user')
+            ->when($request->search, fn($q) =>
+                $q->where('judul', 'like', "%{$request->search}%")->orWhere('kode_aduan', 'like', "%{$request->search}%")
+            )
+            ->when($request->status,   fn($q) => $q->where('status', $request->status))
+            ->when($request->kategori, fn($q) => $q->where('kategori', $request->kategori))
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        return inertia('Pengaduan/Publik', [
+            'pengaduans' => $pengaduans,
+            'filters'    => $request->only(['search','status','kategori']),
+        ]);
     }
 }

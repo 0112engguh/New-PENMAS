@@ -1,65 +1,79 @@
 <?php
-
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
-use Inertia\Response;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Redirect;
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
-    use AuthorizesRequests;
-    /**
-     * Display the user's profile form.
-     */
-    public function edit(Request $request): Response
+    public function edit()
     {
-        return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => session('status'),
-        ]);
-    }
+        $user  = auth()->user();
+        $stats = null;
 
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
-    {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->role === 'masyarakat') {
+            $stats = [
+                'total'    => $user->pengaduans()->count(),
+                'diproses' => $user->pengaduans()->where('status','diproses')->count(),
+                'selesai'  => $user->pengaduans()->where('status','selesai')->count(),
+            ];
         }
 
-        $request->user()->save();
-
-        return Redirect::route('profile.edit');
+        return inertia('Profile', compact('stats'));
     }
 
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
+    public function update(Request $request)
     {
+        $user = auth()->user();
+
         $request->validate([
-            'password' => ['required', 'current_password'],
+            'name'     => 'required|string|max:255',
+            'email'    => ['required','email', Rule::unique('users','email')->ignore($user->id)],
+            'username' => ['nullable','string','max:50', Rule::unique('users','username')->ignore($user->id)],
+            'phone'    => 'nullable|string|max:15',
+            'nik'      => ['nullable','digits:16', Rule::unique('users','nik')->ignore($user->id)],
         ]);
 
-        $user = $request->user();
+        $user->update($request->only('name','email','username','phone','nik'));
 
-        Auth::logout();
+        return back()->with('success', 'Profil berhasil diperbarui');
+    }
 
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'password'         => 'required|min:8|confirmed',
+        ]);
+
+        $user = auth()->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Password saat ini salah']);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        return back()->with('success', 'Password berhasil diubah');
+    }
+
+    public function updateAvatar(Request $request)
+    {
+        $request->validate(['avatar' => 'required|image|mimes:jpg,jpeg,png|max:2048']);
+
+        $user = auth()->user();
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->update(['avatar' => $path]);
+
+        return back()->with('success', 'Foto profil berhasil diperbarui');
+    }
+
+    public function destroy()
+    {
+        $user = auth()->user();
+        auth()->logout();
         $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
+        return redirect('/');
     }
 }

@@ -31,10 +31,20 @@ export default function TanggapanBubble({
 
     return (
         <div className={`flex gap-3 ${isStaff ? "flex-row-reverse" : ""} items-end`}>
-            <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${tipe.avatar}`}
-            >
-                {t.user?.name?.charAt(0).toUpperCase()}
+            <div className="w-8 h-8 rounded-full overflow-hidden">
+                {t.user?.avatar ? (
+                    <img
+                        src={`/storage/${t.user.avatar}`}
+                        alt={t.user.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div
+                        className={`w-full h-full flex items-center justify-center text-white text-xs font-bold ${tipe.avatar}`}
+                    >
+                        {t.user?.name?.charAt(0).toUpperCase()}
+                    </div>
+                )}
             </div>
 
             <div className={`flex flex-col gap-1 max-w-sm ${isStaff ? "items-end" : ""}`}>

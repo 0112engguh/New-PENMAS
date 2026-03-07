@@ -36,6 +36,8 @@ export default function Show({ pengaduan, petugasList }) {
     const s = STATUS_STYLES[pengaduan.status] ?? STATUS_STYLES.menunggu;
     const StatusIcon = s.icon;
 
+    const canManageStatus = ['admin', 'petugas'].includes(user.role);
+
     const handleUpdateStatus = (status) => {
         setNextStatus(status);
         setConfirmOpen(true);
@@ -145,7 +147,7 @@ export default function Show({ pengaduan, petugasList }) {
                     )}
 
                     <div className="flex gap-2 mt-6 flex-wrap">
-                        {(user.role === 'admin' || user.role === 'petugas') && (
+                        {canManageStatus && pengaduan.status !== 'ditolak' && (
                             <>
                                 {pengaduan.status === 'menunggu' && (
                                     <button

@@ -23,7 +23,8 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    // Relationships
+    protected $appends = ['avatar_url'];
+
     public function pengaduans()
     {
         return $this->hasMany(Pengaduan::class);
@@ -60,10 +61,8 @@ class User extends Authenticatable
         return $this->role === 'masyarakat';
     }
 
-    public function getAvatarUrlAttribute(): string
+    public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar
-            ? asset('storage/' . $this->avatar)
-            : 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=6366f1&color=fff';
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
     }
 }
